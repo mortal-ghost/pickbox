@@ -23,7 +23,7 @@ public class LocalStorageService implements StorageService {
 
     private static final String TEMP_CHUNK_DIR = ".tmp";
 
-    public LocalStorageService(@Value("${local.upload.directory}") String uploadDirectory,
+    public LocalStorageService(@Value("${local.storage.path}") String uploadDirectory,
             @Value("${local.upload.url}") String baseUploadUrl) {
         this.uploadDirectory = uploadDirectory;
         this.baseUploadUrl = baseUploadUrl;
