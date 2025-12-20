@@ -1,11 +1,8 @@
 package com.example.pickbox.dao;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.stereotype.Repository;
 
-import com.example.pickbox.models.UserCredential;
+import com.example.pickbox.models.User;
 
-@Repository
-public interface UserDao extends MongoRepository<UserCredential, String> {
-    UserCredential findByEmail(String email);
+public interface UserDao extends MongoRepository<User, String> {
 }
