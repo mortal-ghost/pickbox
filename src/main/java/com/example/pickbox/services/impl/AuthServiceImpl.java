@@ -3,6 +3,7 @@ package com.example.pickbox.services.impl;
 import java.time.Instant;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.pickbox.constants.AuthErrorMessages;
 import com.example.pickbox.dao.UserCredentialDao;
@@ -14,6 +15,7 @@ import com.example.pickbox.models.UserCredential;
 import com.example.pickbox.models.UserStatus;
 import com.example.pickbox.services.AuthService;
 import com.example.pickbox.services.JwtService;
+import com.example.pickbox.services.PasswordService;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -22,11 +24,14 @@ public class AuthServiceImpl implements AuthService {
     private final UserDao userDao;
 
     private final JwtService jwtService;
+    private final PasswordService passwordService;
+            
 
-    public AuthServiceImpl(UserCredentialDao userCredentialDao, UserDao userDao, JwtService jwtService) {
+    public AuthServiceImpl(UserCredentialDao userCredentialDao, UserDao userDao, JwtService jwtService, PasswordService passwordService) {
         this.userCredentialDao = userCredentialDao;
         this.userDao = userDao;
         this.jwtService = jwtService;
+        this.passwordService = passwordService;
     }
 
     @Override
@@ -36,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthException(AuthErrorMessages.USER_NOT_FOUND);
         }
 
-        if (!verifyPassword(password, userCredential.getPassword(), userCredential.getSalt())) {
+        if (!passwordService.verifyPassword(password, userCredential.getPassword(), userCredential.getSalt())) {
             throw new AuthException(AuthErrorMessages.INVALID_CREDENTIALS);
         }
         User user = userDao.findById(userCredential.getUserId()).orElse(null);
@@ -49,34 +54,15 @@ public class AuthServiceImpl implements AuthService {
         return userDto;
     }
 
-    private boolean verifyPassword(String inputPassword, String storedHash, String salt) {
-        String inputHash = hashPassword(inputPassword, salt);
-        return inputHash.equals(storedHash);
-    }
-
-    private String hashPassword(String password, String salt) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            md.update(java.util.Base64.getDecoder().decode(salt));
-            byte[] hashedPassword = md.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return java.util.Base64.getEncoder().encodeToString(hashedPassword);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error hashing password", e);
-        }
-    }
-
-    private String generateSalt() {
-        return java.util.UUID.randomUUID().toString();
-    }
-
     @Override
+    @Transactional
     public UserDto register(String email, String password, String username) {
         UserCredential userCredential = userCredentialDao.findByEmail(email);
         if (userCredential != null) {
             throw new AuthException(AuthErrorMessages.USER_ALREADY_EXISTS);
         }
-        String salt = generateSalt();
-        String hashedPassword = hashPassword(password, salt);
+        String salt = passwordService.generateSalt();
+        String hashedPassword = passwordService.hashPassword(password, salt);
         User user = User.builder()
                 .username(username)
                 .email(email)
