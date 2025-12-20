@@ -10,10 +10,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.pickbox.dtos.UploadRequest;
 import com.example.pickbox.dtos.UploadResponse;
+import com.example.pickbox.services.UploadService;
 
 @RestController
 public class UploadController {
-    public UploadController() {
+    private final UploadService uploadService;
+    
+    public UploadController(UploadService uploadService) {
+        this.uploadService = uploadService;
     }
 
     private boolean validateAuth(String userId) {
@@ -21,7 +25,8 @@ public class UploadController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<UploadResponse> initializeUpload(@RequestAttribute("userId") String userId,
+    public ResponseEntity<UploadResponse> initializeUpload(
+            @RequestAttribute(required = false) String userId,
             @RequestBody UploadRequest uploadRequest) {
         if (!validateAuth(userId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -30,7 +35,8 @@ public class UploadController {
     }
 
     @PostMapping("/upload/chunk/{uploadId}/{chunkIndex}")
-    public ResponseEntity<UploadResponse> uploadChunk(@RequestAttribute("userId") String userId,
+    public ResponseEntity<UploadResponse> uploadChunk(
+            @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId,
             @PathVariable int chunkIndex, @RequestBody UploadRequest uploadRequest) {
         if (!validateAuth(userId)) {
@@ -40,7 +46,8 @@ public class UploadController {
     }
 
     @PostMapping("/upload/complete/{uploadId}")
-    public ResponseEntity<UploadResponse> completeUpload(@RequestAttribute("userId") String userId,
+    public ResponseEntity<UploadResponse> completeUpload(
+            @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId) {
         if (!validateAuth(userId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -49,7 +56,8 @@ public class UploadController {
     }
 
     @PostMapping("/upload/abort/{uploadId}")
-    public ResponseEntity<UploadResponse> abortUpload(@RequestAttribute("userId") String userId,
+    public ResponseEntity<UploadResponse> abortUpload(
+            @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId) {
         if (!validateAuth(userId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

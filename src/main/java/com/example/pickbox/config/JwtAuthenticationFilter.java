@@ -2,7 +2,6 @@ package com.example.pickbox.config;
 
 import java.io.IOException;
 
-import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.pickbox.services.JwtService;
@@ -21,9 +20,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
