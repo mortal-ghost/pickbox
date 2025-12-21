@@ -36,7 +36,7 @@ export function Navbar() {
                                 {user.username}
                             </span>
                             <Button variant="ghost" asChild>
-                                <Link href="/home">Dashboard</Link>
+                                <Link href="/home">Home</Link>
                             </Button>
                             <Button variant="outline" onClick={handleLogout}>
                                 Logout
