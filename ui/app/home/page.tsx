@@ -4,6 +4,7 @@ import { useAuth } from "@/context/auth-context";
 import { Navbar } from "@/components/landing/navbar";
 
 import { SearchBar } from "./search-bar";
+import { UploadFab } from "@/components/home/upload-fab";
 import { LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,14 @@ export default function HomePage() {
                     </div>
                 </div>
             </main>
+            <UploadFab
+                onFileUpload={(files) => {
+                    console.log("File upload:", files);
+                }}
+                onCreateFolder={() => {
+                    console.log("Create folder triggered");
+                }}
+            />
         </div>
     );
 }
