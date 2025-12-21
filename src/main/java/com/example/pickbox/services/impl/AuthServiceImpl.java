@@ -83,4 +83,17 @@ public class AuthServiceImpl implements AuthService {
         userDto.setToken(token);
         return userDto;
     }
+
+    @Override
+    public UserDto getCurrentUser(String token) {
+        String userId = jwtService.extractUsername(token);
+        if (userId == null) {
+            throw new AuthException(AuthErrorMessages.TOKEN_INVALID);
+        }
+        User user = userDao.findById(userId).orElse(null);
+        if (user == null) {
+            throw new AuthException(AuthErrorMessages.USER_NOT_FOUND);
+        }
+        return new UserDto(user);
+    }
 }
