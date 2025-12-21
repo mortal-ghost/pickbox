@@ -1,3 +1,4 @@
+import Cookies from "js-cookie";
 import { API_BASE_URL, ENDPOINTS } from "@/lib/constants";
 
 export interface LoginRequest {
@@ -54,22 +55,15 @@ export const AuthService = {
     },
 
     setToken: (token: string) => {
-        if (typeof window !== "undefined") {
-            localStorage.setItem("token", token);
-        }
+        Cookies.set("token", token, { expires: 7 });
     },
 
     getToken: (): string | null => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("token");
-        }
-        return null;
+        return Cookies.get("token") || null;
     },
 
     removeToken: () => {
-        if (typeof window !== "undefined") {
-            localStorage.removeItem("token");
-        }
+        Cookies.remove("token");
     },
 
     getCurrentUser: async (): Promise<AuthResponse> => {
