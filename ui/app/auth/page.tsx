@@ -1,16 +1,28 @@
 "use client";
 
-
 import { useState, useEffect, Suspense } from "react";
-
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/landing/navbar";
+import { Spinner } from "@/components/ui/spinner";
+import { AuthService } from "@/services/auth-service";
+import { useAuth } from "@/context/auth-context";
 
 function AuthContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
+    const { login } = useAuth();
+
     const [isRegister, setIsRegister] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const [formData, setFormData] = useState({
+        username: "",
+        email: "",
+        password: ""
+    });
 
     useEffect(() => {
         const mode = searchParams.get("mode");
@@ -19,7 +31,37 @@ function AuthContent() {
         } else if (mode === "login") {
             setIsRegister(false);
         }
+        setError("");
+        setFormData({ username: "", email: "", password: "" });
     }, [searchParams]);
+
+    const handleSubmit = async () => {
+        setError("");
+        setIsLoading(true);
+
+        try {
+            if (isRegister) {
+                const response = await AuthService.register({
+                    username: formData.username,
+                    email: formData.email,
+                    password: formData.password
+                });
+                login(response.token, response);
+                router.push("/");
+            } else {
+                const response = await AuthService.login({
+                    email: formData.email,
+                    password: formData.password
+                });
+                login(response.token, response);
+                router.push("/");
+            }
+        } catch (err: any) {
+            setError(err.message || "An error occurred");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="flex min-h-screen flex-col bg-background">
@@ -39,12 +81,20 @@ function AuthContent() {
                     </div>
 
                     <div className="w-full space-y-4">
+                        {error && (
+                            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+                                {error}
+                            </div>
+                        )}
+
                         {isRegister && (
                             <div className="space-y-2">
                                 <Input
                                     type="text"
                                     placeholder="Username"
                                     className="bg-secondary/50"
+                                    value={formData.username}
+                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                 />
                             </div>
                         )}
@@ -53,6 +103,8 @@ function AuthContent() {
                                 type="email"
                                 placeholder="Email"
                                 className="bg-secondary/50"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
@@ -60,10 +112,13 @@ function AuthContent() {
                                 type="password"
                                 placeholder="Password"
                                 className="bg-secondary/50"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
                         </div>
 
-                        <Button className="w-full" size="lg">
+                        <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isLoading}>
+                            {isLoading && <Spinner className="mr-2 h-4 w-4" />}
                             {isRegister ? "Sign Up" : "Sign In"}
                         </Button>
                     </div>
@@ -75,7 +130,10 @@ function AuthContent() {
                                 <Button
                                     variant="link"
                                     className="p-0 h-auto font-semibold text-primary"
-                                    onClick={() => setIsRegister(false)}
+                                    onClick={() => {
+                                        setIsRegister(false);
+                                        router.replace("/auth?mode=login");
+                                    }}
                                 >
                                     Login
                                 </Button>
@@ -86,7 +144,10 @@ function AuthContent() {
                                 <Button
                                     variant="link"
                                     className="p-0 h-auto font-semibold text-primary"
-                                    onClick={() => setIsRegister(true)}
+                                    onClick={() => {
+                                        setIsRegister(true);
+                                        router.replace("/auth?mode=register");
+                                    }}
                                 >
                                     Register
                                 </Button>
