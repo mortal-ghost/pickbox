@@ -19,13 +19,12 @@ PickBox is a file storage application built using Spring Boot and React. It prov
 - Use the maven wrapper to build the backend
   - `./mvnw clean install`
 - Use the npm to build the frontend
-  - `npm run build`
+  - `cd ui && npm run build`
 - Run the backend
   - `./mvnw spring-boot:run`
 - Run the frontend
-  - `npm run dev`
+  - `cd ui && npm run dev`
 
 ## Running the application
 
-- Open the application in your browser
-- Go to [http://localhost:3000](http://localhost:3000)
+- Open [http://localhost:3000](http://localhost:3000) in a browser
