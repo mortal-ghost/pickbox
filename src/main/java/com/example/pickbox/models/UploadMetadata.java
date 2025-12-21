@@ -22,7 +22,7 @@ public class UploadMetadata {
     private String parentId;
     private long fileSize;
 
-    private List<ChunkMetadata> chunks;
+    private List<ChunkMetadata> completedChunks;
     private long totalChunks;
     private long chunkSize;    
 
