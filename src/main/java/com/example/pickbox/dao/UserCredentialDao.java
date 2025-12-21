@@ -8,9 +8,9 @@ import com.example.pickbox.models.UserCredential;
 
 @Repository
 public interface UserCredentialDao extends MongoRepository<UserCredential, String> {
-    @Query("{ 'email': ?0, 'status': 'ACTIVE' }")
+    @Query("{ 'email': ?0 }")
     UserCredential findByEmail(String email);
 
-    @Query("{ 'userId': ?0, 'status': 'ACTIVE' }")
+    @Query("{ 'userId': ?0 }")
     UserCredential findByUserId(String userId);
 }
