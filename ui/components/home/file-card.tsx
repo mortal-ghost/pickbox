@@ -15,9 +15,10 @@ interface FileCardProps {
     readonly item: FileItem;
     readonly onDownload?: (item: FileItem) => void;
     readonly onOptions?: (item: FileItem) => void;
+    readonly onFolderClick?: (item: FileItem) => void;
 }
 
-export function FileCard({ item, onDownload, onOptions }: FileCardProps) {
+export function FileCard({ item, onDownload, onOptions, onFolderClick }: FileCardProps) {
     const isFolder = item.type === 'FOLDER';
     const isUploading = item.isUploading;
 
@@ -31,7 +32,18 @@ export function FileCard({ item, onDownload, onOptions }: FileCardProps) {
     };
 
     return (
-        <div className="relative group flex flex-col justify-between p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+        <div
+            onClick={() => isFolder && onFolderClick?.(item)}
+            onKeyDown={(e) => {
+                if (isFolder && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    onFolderClick?.(item);
+                }
+            }}
+            role={isFolder ? "button" : undefined}
+            tabIndex={isFolder ? 0 : undefined}
+            className={`relative group flex flex-col justify-between p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow ${isFolder ? 'cursor-pointer focus:ring-2 focus:ring-ring focus:outline-none' : ''}`}
+        >
             {/* Header / Icon */}
             <div className="flex justify-between items-start mb-4">
                 <div className={`p-3 rounded-lg ${isFolder ? 'bg-blue-500/10 text-blue-500' : 'bg-orange-500/10 text-orange-500'}`}>

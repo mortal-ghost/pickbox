@@ -14,9 +14,10 @@ interface FileRowProps {
     readonly item: FileItem;
     readonly onDownload?: (item: FileItem) => void;
     readonly onOptions?: (item: FileItem) => void;
+    readonly onFolderClick?: (item: FileItem) => void;
 }
 
-export function FileRow({ item, onDownload, onOptions }: FileRowProps) {
+export function FileRow({ item, onDownload, onOptions, onFolderClick }: FileRowProps) {
     const isFolder = item.type === 'FOLDER';
     const isUploading = item.isUploading;
 
@@ -34,7 +35,18 @@ export function FileRow({ item, onDownload, onOptions }: FileRowProps) {
     };
 
     return (
-        <div className="group flex items-center justify-between p-3 rounded-lg border-b last:border-0 hover:bg-muted/30 transition-colors">
+        <div
+            onClick={() => isFolder && onFolderClick?.(item)}
+            onKeyDown={(e) => {
+                if (isFolder && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    onFolderClick?.(item);
+                }
+            }}
+            role={isFolder ? "button" : undefined}
+            tabIndex={isFolder ? 0 : undefined}
+            className={`group flex items-center justify-between p-3 rounded-lg border-b last:border-0 hover:bg-muted/30 transition-colors ${isFolder ? 'cursor-pointer focus:ring-2 focus:ring-ring focus:outline-none' : ''}`}
+        >
             <div className="flex items-center gap-4 flex-1 min-w-0">
                 <div className={`p-2 rounded-lg ${isFolder ? 'bg-blue-500/10 text-blue-500' : 'bg-orange-500/10 text-orange-500'}`}>
                     {isFolder ? <Folder size={20} /> : <FileIcon size={20} />}
