@@ -30,7 +30,7 @@ public class WebConfig implements WebMvcConfigurer {
     public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilter() {
         FilterRegistrationBean<JwtAuthenticationFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new JwtAuthenticationFilter(jwtService));
-        registrationBean.addUrlPatterns("/upload/*"); // Apply to UploadController endpoints
+        registrationBean.addUrlPatterns("/upload/*", "/files/*", "/download/*"); // Apply to UploadController endpoints
         return registrationBean;
     }
 }

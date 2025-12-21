@@ -40,7 +40,7 @@ public class UploadController {
         return ResponseEntity.ok(uploadService.initiateUpload(uploadRequest));
     }
 
-    @PostMapping("/chunk/{uploadId}/{chunkIndex}")
+    @PostMapping("/chunk/{uploadId}/{chunkIndex}/complete")
     public ResponseEntity<Boolean> completeChunk(
             @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId,
