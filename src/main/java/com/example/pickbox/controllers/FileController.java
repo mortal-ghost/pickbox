@@ -6,11 +6,13 @@ import com.example.pickbox.dtos.ItemDto;
 import com.example.pickbox.dtos.UploadRequest;
 import com.example.pickbox.services.FileService;
 
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -27,15 +29,16 @@ public class FileController {
 
     private final FileService fileService;
 
-    @GetMapping("/")
-    public ResponseEntity<List<ItemDto>> getAllFilesAndFolders(@RequestAttribute(required = false) String userId) {
-        return ResponseEntity.ok(fileService.listFiles(null, userId));
-    }
-
     private void validateUser(String userId) {
         if (userId == null || userId.isEmpty()) {
             throw new IllegalArgumentException("User ID is required");
         }
+    }
+
+    @GetMapping("/")
+    public ResponseEntity<List<ItemDto>> getAllFilesAndFolders(@RequestAttribute(required = false) String userId) {
+        validateUser(userId);
+        return ResponseEntity.ok(fileService.listAllFiles(userId));
     }
 
     @PostMapping("/folder")
@@ -50,21 +53,28 @@ public class FileController {
     public ResponseEntity<ItemDto> getFile(@PathVariable String id,
             @RequestAttribute(required = false) String userId) {
         validateUser(userId);
-        // TODO: Implement get single file
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(fileService.getFile(id, userId));
     }
 
     @GetMapping("/{id}/content")
-    public ResponseEntity<ItemDto> getFileContent(@PathVariable String id,
+    public ResponseEntity<Void> getFileContent(@PathVariable String id,
             @RequestAttribute(required = false) String userId,
             HttpServletResponse response) {
-        // TODO: Implement download
-        return ResponseEntity.ok().build();
+        validateUser(userId);
+        try (ServletOutputStream os = response.getOutputStream()) {
+            fileService.getFileContent(id, userId, os);
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=" + id);
+            return ResponseEntity.ok().build();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to download file", e);
+        }
     }
 
     @GetMapping({ "/list", "/{id}/list" })
     public ResponseEntity<List<ItemDto>> listFiles(@PathVariable(required = false) String id,
             @RequestAttribute(required = false) String userId) {
+        validateUser(userId);
         return ResponseEntity.ok(fileService.listFiles(id, userId));
     }
 }
