@@ -1,6 +1,7 @@
 package com.example.pickbox.controllers;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class LocalFileUploadController {
     }
 
     @PostMapping("/upload/chunk/{uploadId}/{chunkIndex}")
-    public ResponseEntity<Void> uploadChunk(
+    public ResponseEntity<Map<String, String>> uploadChunk(
             @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId,
             @PathVariable int chunkIndex,
@@ -31,11 +32,11 @@ public class LocalFileUploadController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         try {
-            localStorageService.uploadChunk(uploadId, chunkIndex, request.getInputStream());
+            String storageId = localStorageService.uploadChunk(uploadId, chunkIndex, request.getInputStream());
+            return ResponseEntity.ok(java.util.Collections.singletonMap("storageId", storageId));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        } 
-        return ResponseEntity.ok().build();
+        }
     }
 
 }
