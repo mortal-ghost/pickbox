@@ -56,6 +56,7 @@ export default function HomePage() {
             setServerFiles(mappedFiles);
         } catch (error) {
             console.error("Failed to load files", error);
+            toast.error("Failed to load files");
         } finally {
             setIsLoading(false);
         }
@@ -72,7 +73,15 @@ export default function HomePage() {
         const unsubscribe = uploadService.subscribe((uploads) => {
             setUploadTasks(uploads);
         });
-        return unsubscribe;
+
+        const unsubscribeCompletion = uploadService.onUploadComplete(() => {
+            refreshFiles();
+        });
+
+        return () => {
+            unsubscribe();
+            unsubscribeCompletion();
+        };
     }, []);
 
     const handleSearch = (query: string) => {
@@ -155,6 +164,18 @@ export default function HomePage() {
     ];
 
 
+    const handlePause = (item: FileItem) => {
+        uploadService.pauseUpload(item.id);
+    };
+
+    const handleResume = (item: FileItem) => {
+        uploadService.resumeUpload(item.id);
+    };
+
+    const handleCancel = (item: FileItem) => {
+        uploadService.cancelUpload(item.id);
+    };
+
     return (
         <div className="flex h-screen flex-col bg-background overflow-hidden">
             <Navbar />
@@ -222,6 +243,9 @@ export default function HomePage() {
                                             item={item}
                                             onDownload={handleDownload}
                                             onFolderClick={handleFolderClick}
+                                            onPause={handlePause}
+                                            onResume={handleResume}
+                                            onCancel={handleCancel}
                                         />
                                     ) : (
                                         <FileRow
@@ -229,6 +253,9 @@ export default function HomePage() {
                                             item={item}
                                             onDownload={handleDownload}
                                             onFolderClick={handleFolderClick}
+                                            onPause={handlePause}
+                                            onResume={handleResume}
+                                            onCancel={handleCancel}
                                         />
                                     )
                                 ))}
