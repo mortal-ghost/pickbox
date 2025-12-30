@@ -16,9 +16,12 @@ interface FileCardProps {
     readonly onDownload?: (item: FileItem) => void;
     readonly onOptions?: (item: FileItem) => void;
     readonly onFolderClick?: (item: FileItem) => void;
+    readonly onPause?: (item: FileItem) => void;
+    readonly onResume?: (item: FileItem) => void;
+    readonly onCancel?: (item: FileItem) => void;
 }
 
-export function FileCard({ item, onDownload, onOptions, onFolderClick }: FileCardProps) {
+export function FileCard({ item, onDownload, onOptions, onFolderClick, onPause, onResume, onCancel }: FileCardProps) {
     const isFolder = item.type === 'FOLDER';
     const isUploading = item.isUploading;
 
@@ -69,6 +72,25 @@ export function FileCard({ item, onDownload, onOptions, onFolderClick }: FileCar
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )}
+                {isUploading && (
+                    <div className="flex gap-1">
+                        {item.uploadStatus === 'PAUSED' ? (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onResume?.(item); }}>
+                                {/* Play Icon */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onPause?.(item); }}>
+                                {/* Pause Icon */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onCancel?.(item); }}>
+                            {/* X Icon */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Content */}
@@ -81,7 +103,7 @@ export function FileCard({ item, onDownload, onOptions, onFolderClick }: FileCar
                 {isUploading && (
                     <div className="mt-3 space-y-2">
                         <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{item.uploadStatus === 'PENDING' ? 'Waiting...' : 'Uploading...'}</span>
+                            <span>{item.uploadStatus === 'PENDING' ? 'Waiting...' : item.uploadStatus === 'PAUSED' ? 'Paused' : 'Uploading...'}</span>
                             <span>{item.uploadProgress}%</span>
                         </div>
                         {/* Use custom Progress component */}

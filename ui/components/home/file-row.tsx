@@ -1,7 +1,7 @@
 "use client";
 
 import { FileItem } from "@/lib/types";
-import { File as FileIcon, Folder, MoreVertical, Download, Info, Loader2 } from "lucide-react";
+import { File as FileIcon, Folder, MoreVertical, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -15,9 +15,12 @@ interface FileRowProps {
     readonly onDownload?: (item: FileItem) => void;
     readonly onOptions?: (item: FileItem) => void;
     readonly onFolderClick?: (item: FileItem) => void;
+    readonly onPause?: (item: FileItem) => void;
+    readonly onResume?: (item: FileItem) => void;
+    readonly onCancel?: (item: FileItem) => void;
 }
 
-export function FileRow({ item, onDownload, onOptions, onFolderClick }: FileRowProps) {
+export function FileRow({ item, onDownload, onOptions, onFolderClick, onPause, onResume, onCancel }: FileRowProps) {
     const isFolder = item.type === 'FOLDER';
     const isUploading = item.isUploading;
 
@@ -62,7 +65,7 @@ export function FileRow({ item, onDownload, onOptions, onFolderClick }: FileRowP
                                     style={{ width: `${item.uploadProgress || 0}%` }}
                                 />
                             </div>
-                            <span className="text-[10px] text-muted-foreground">{item.uploadProgress}%</span>
+                            <span className="text-[10px] text-muted-foreground">{item.uploadProgress}% {item.uploadStatus === 'PAUSED' ? '(Paused)' : ''}</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -76,7 +79,20 @@ export function FileRow({ item, onDownload, onOptions, onFolderClick }: FileRowP
 
             <div className="flex items-center gap-2">
                 {isUploading && (
-                    <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                    <div className="flex gap-1 items-center">
+                        {item.uploadStatus === 'PAUSED' ? (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onResume?.(item); }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onPause?.(item); }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onCancel?.(item); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </Button>
+                    </div>
                 )}
 
                 {!isUploading && (
