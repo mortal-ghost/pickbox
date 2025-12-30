@@ -19,7 +19,7 @@ import com.example.pickbox.services.UploadService;
 @RequestMapping("/upload")
 public class UploadController {
     private final UploadService uploadService;
-    
+
     public UploadController(UploadService uploadService) {
         this.uploadService = uploadService;
     }
@@ -35,6 +35,7 @@ public class UploadController {
         if (!validateAuth(userId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        uploadRequest.setUserId(userId);
 
         // Validations pending
         return ResponseEntity.ok(uploadService.initiateUpload(uploadRequest));
@@ -63,7 +64,7 @@ public class UploadController {
         return ResponseEntity.ok(true);
     }
 
-    @GetMapping("/abort/{uploadId}")
+    @PostMapping("/abort/{uploadId}")
     public ResponseEntity<Boolean> abortUpload(
             @RequestAttribute(required = false) String userId,
             @PathVariable String uploadId) {
