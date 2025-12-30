@@ -8,4 +8,5 @@ public class UploadRequest {
     private long size;
     private String userId;
     private String parentId;
+    private String mimeType;
 }

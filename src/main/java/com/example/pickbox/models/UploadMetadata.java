@@ -5,17 +5,18 @@ import java.time.Instant;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
 import lombok.Builder;
 import lombok.Data;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 @Data
 @Builder
 @Document(collection = "uploads")
 public class UploadMetadata {
     @Id
-    @Column(name = "_id")
+    @Field("_id")
     private String uploadId;
 
     private String fileName;
@@ -24,7 +25,7 @@ public class UploadMetadata {
 
     private List<ChunkMetadata> completedChunks;
     private long totalChunks;
-    private long chunkSize;    
+    private long chunkSize;
 
     private String mimeType;
     private String storageId;

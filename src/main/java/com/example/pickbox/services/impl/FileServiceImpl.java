@@ -24,9 +24,10 @@ public class FileServiceImpl implements FileService {
     private final StorageService storageService;
 
     public FileServiceImpl(FileRepository fileRepository, 
+        StorageServiceFactory storageServiceFactory,
         @Value("${storage.type}") String storageType) {
         this.fileRepository = fileRepository;
-        this.storageService = StorageServiceFactory.getStorageService(StorageType.valueOf(storageType));
+        this.storageService = storageServiceFactory.getStorageService(StorageType.valueOf(storageType.toUpperCase()));
     }
 
     @Override
