@@ -1,4 +1,4 @@
-import { addUpload, getAllUploads, updateUpload } from '@/lib/db';
+import { addUpload, deleteUpload, getAllUploads, updateUpload } from '@/lib/db';
 import { API_BASE_URL } from '@/lib/constants';
 import Cookies from 'js-cookie';
 import { toast } from 'sonner';
@@ -13,11 +13,13 @@ export interface UploadTask {
 }
 
 type UploadListener = (uploads: UploadTask[]) => void;
+type CompletionListener = (uploadId: string) => void;
 
 class UploadService {
     private readonly uploads: Map<string, UploadTask> = new Map();
     private activeUploads: number = 0;
     private listeners: UploadListener[] = [];
+    private completionListeners: CompletionListener[] = [];
     private readonly MAX_CONCURRENT_UPLOADS = 3;
     private readonly MAX_CONCURRENT_CHUNKS = 3;
 
@@ -48,9 +50,20 @@ class UploadService {
         };
     }
 
+    public onUploadComplete(listener: CompletionListener) {
+        this.completionListeners.push(listener);
+        return () => {
+            this.completionListeners = this.completionListeners.filter(l => l !== listener);
+        };
+    }
+
     private notifyListeners() {
         const tasks = Array.from(this.uploads.values());
         this.listeners.forEach(l => l(tasks));
+    }
+
+    private notifyCompletion(uploadId: string) {
+        this.completionListeners.forEach(l => l(uploadId));
     }
 
     async initiateUpload(file: File, folderId?: string) {
@@ -64,8 +77,8 @@ class UploadService {
                     'Authorization': token ? `Bearer ${token}` : ''
                 },
                 body: JSON.stringify({
-                    fileName: file.name,
-                    fileSize: file.size,
+                    name: file.name,
+                    size: file.size,
                     mimeType: file.type || 'application/octet-stream',
                     parentId: folderId
                 })
@@ -75,6 +88,11 @@ class UploadService {
 
             const data = await res.json();
             const uploadId = data.uploadId;
+
+            if (!uploadId) {
+                console.error("Invalid response from upload init:", data);
+                throw new Error("Backend returned no uploadId");
+            }
             // Assuming backend returns chunkSize, if not default to 10MB
             const chunkSize = data.chunkSize || 10 * 1024 * 1024;
 
@@ -121,6 +139,30 @@ class UploadService {
         }
     }
 
+    async cancelUpload(uploadId: string) {
+        const task = this.uploads.get(uploadId);
+        if (task) {
+            // Optimistic update
+            task.status = 'ERROR';
+            this.uploads.delete(uploadId);
+            this.notifyListeners();
+
+            // Call backend to abort
+            const token = Cookies.get('token');
+            try {
+                await fetch(`${API_BASE_URL}/upload/abort/${uploadId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                });
+                await deleteUpload(uploadId);
+            } catch (e) {
+                console.error("Failed to abort upload on backend", e);
+            }
+        }
+    }
+
     private async processQueue() {
         if (this.activeUploads >= this.MAX_CONCURRENT_UPLOADS) return;
 
@@ -136,10 +178,12 @@ class UploadService {
             await this.uploadFile(nextTask);
             nextTask.status = 'COMPLETED';
             toast.success("Upload completed: " + nextTask.file.name);
+            this.notifyCompletion(nextTask.uploadId);
         } catch (e) {
             console.error("Upload failed", e);
-            nextTask.status = 'ERROR';
-            toast.error("Upload failed: " + nextTask.file.name);
+            nextTask.status = 'PAUSED'; // Treat error as paused so user can retry
+            this.notifyListeners();
+            toast.error("Upload interrupted. Resuming...");
         } finally {
             this.activeUploads--;
             this.uploads.set(nextTask.uploadId, nextTask);
@@ -151,64 +195,66 @@ class UploadService {
 
     private async uploadFile(task: UploadTask) {
         const totalChunks = Math.ceil(task.file.size / task.chunkSize);
-
-        let activeChunkUploads = 0;
-        let nextChunkIndex = 0;
         let completedChunksCount = 0;
-        let error: any = null;
 
-        return new Promise<void>((resolve, reject) => {
-            const next = async () => {
-                if (error) return;
+        let nextChunkIndex = 0;
+
+        const worker = async () => {
+            while (nextChunkIndex < totalChunks) {
                 if (this.uploads.get(task.uploadId)?.status === 'PAUSED') return;
 
-                if (completedChunksCount === totalChunks) {
-                    try {
-                        await this.completeUpload(task.uploadId);
-                        resolve();
-                    } catch (e) {
-                        reject(e);
+                const chunkIndex = nextChunkIndex++;
+                await this.processChunk(task, chunkIndex, async () => {
+                    completedChunksCount++;
+                    task.progress = Math.round((completedChunksCount / totalChunks) * 100);
+
+                    this.uploads.set(task.uploadId, task);
+                    this.notifyListeners();
+
+                    if (completedChunksCount % 3 === 0 || completedChunksCount === totalChunks) {
+                        await updateUpload({ ...task, createdAt: Date.now() });
                     }
-                    return;
-                }
+                });
+            }
+        };
 
-                while (activeChunkUploads < this.MAX_CONCURRENT_CHUNKS && nextChunkIndex < totalChunks) {
-                    if (this.uploads.get(task.uploadId)?.status === 'PAUSED') return;
+        const workers = new Array(Math.min(this.MAX_CONCURRENT_CHUNKS, totalChunks))
+            .fill(null)
+            .map(() => worker());
 
-                    const chunkIndex = nextChunkIndex++;
-                    activeChunkUploads++;
+        await Promise.all(workers);
 
-                    const start = chunkIndex * task.chunkSize;
-                    const end = Math.min(start + task.chunkSize, task.file.size);
-                    const chunk = task.file.slice(start, end);
+        if (this.uploads.get(task.uploadId)?.status !== 'PAUSED' && completedChunksCount === totalChunks) {
+            await this.completeUpload(task.uploadId);
+        }
+    }
 
-                    this.uploadChunk(task.uploadId, chunkIndex, chunk)
-                        .then(async () => {
-                            activeChunkUploads--;
-                            completedChunksCount++;
+    private async processChunk(task: UploadTask, chunkIndex: number, onComplete: () => Promise<void>) {
+        const start = chunkIndex * task.chunkSize;
+        const end = Math.min(start + task.chunkSize, task.file.size);
+        const chunk = task.file.slice(start, end);
 
-                            task.progress = Math.round((completedChunksCount / totalChunks) * 100);
+        const storageId = await this.uploadChunk(task.uploadId, chunkIndex, chunk);
+        await this.completeChunk(task.uploadId, chunkIndex, storageId);
 
-                            // Update memory state always
-                            this.uploads.set(task.uploadId, task);
-                            this.notifyListeners();
+        await onComplete();
+    }
 
-                            // Debounce DB updates
-                            if (completedChunksCount % 3 === 0 || completedChunksCount === totalChunks) {
-                                await updateUpload({ ...task, createdAt: Date.now() });
-                            }
-
-                            next();
-                        })
-                        .catch((e) => {
-                            activeChunkUploads--;
-                            error = e;
-                            reject(e);
-                        });
-                }
-            };
-            next();
+    async completeChunk(uploadId: string, chunkIndex: number, storageId: string) {
+        const token = Cookies.get('token');
+        const res = await fetch(`${API_BASE_URL}/upload/chunk/${uploadId}/${chunkIndex}/complete`, {
+            method: 'POST',
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : '',
+                'Content-Type': 'application/json' // Binary stream
+            },
+            body: JSON.stringify({
+                storageId,
+                chunkIndex
+            })
         });
+        if (!res.ok) throw new Error(`Failed chunk ${chunkIndex}`);
+        return res.json();
     }
 
 
@@ -223,7 +269,11 @@ class UploadService {
             body: chunk
         });
         if (!res.ok) throw new Error(`Failed chunk ${index}`);
+        const data = await res.json();
+        return data.storageId;
     }
+
+
 
     private async completeUpload(uploadId: string) {
         const token = Cookies.get('token');
