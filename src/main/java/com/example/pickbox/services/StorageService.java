@@ -8,4 +8,6 @@ public interface StorageService {
     void completeUpload(String uploadId);
 
     void abortUpload(String uploadId);
+
+    String generateDownloadUrl(String uploadId, String originalFileName);
 }
