@@ -37,6 +37,16 @@ class FileService {
         if (!res.ok) throw new Error("Failed to create folder");
         return await res.json();
     }
+
+    async getDownloadUrl(fileId: string): Promise<string> {
+        const res = await fetch(`${API_BASE_URL}/download/${fileId}`, {
+            headers: this.getHeaders()
+        });
+
+        if (!res.ok) throw new Error("Failed to get download URL");
+        const data = await res.json();
+        return data.url;
+    }
 }
 
 export const fileService = new FileService();

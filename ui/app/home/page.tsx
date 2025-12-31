@@ -88,8 +88,14 @@ export default function HomePage() {
         setSearchQuery(query);
     };
 
-    const handleDownload = (item: FileItem) => {
-        console.log("Download", item);
+    const handleDownload = async (item: FileItem) => {
+        try {
+            const url = await fileService.getDownloadUrl(item.id);
+            window.open(url, '_blank');
+        } catch (error) {
+            console.error("Failed to download file", error);
+            toast.error("Failed to download file");
+        }
     };
 
     const handleCreateFolder = async () => {
