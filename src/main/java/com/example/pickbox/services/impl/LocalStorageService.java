@@ -18,6 +18,11 @@ import com.example.pickbox.services.StorageService;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @Slf4j
@@ -25,6 +30,8 @@ public class LocalStorageService implements StorageService {
     private final String uploadDirectory;
 
     private final String baseUploadUrl;
+
+    private final String secretKey;
 
     private static final String TEMP_CHUNK_DIR = ".tmp";
 
@@ -41,9 +48,11 @@ public class LocalStorageService implements StorageService {
     private static final String FILE_PERMISSIONS_STRING = "rw-------";
 
     public LocalStorageService(@Value("${local.storage.path}") String uploadDirectory,
-            @Value("${local.upload.url}") String baseUploadUrl) {
+            @Value("${local.upload.url}") String baseUploadUrl,
+            @Value("${local.storage.secret-key}") String secretKey) {
         this.uploadDirectory = uploadDirectory;
         this.baseUploadUrl = baseUploadUrl;
+        this.secretKey = secretKey;
     }
 
     @PostConstruct
@@ -176,5 +185,43 @@ public class LocalStorageService implements StorageService {
             throw new RuntimeException(e);
         }
         return chunkPath.getFileName().toString();
+    }
+
+    @Override
+    public String generateDownloadUrl(String uploadId, String originalFileName) {
+        long expiration = System.currentTimeMillis() + 3600 * 1000; // 1 hour
+        String signature = generateSignature(uploadId, expiration);
+
+        // encode filename
+        String encodedFilename = URLEncoder.encode(originalFileName, StandardCharsets.UTF_8);
+
+        return String.format("%s/local-download/%s?expires=%d&signature=%s&filename=%s",
+                baseUploadUrl, uploadId, expiration, signature, encodedFilename);
+    }
+
+    public boolean verifySignature(String uploadId, long expiration, String signature) {
+        if (System.currentTimeMillis() > expiration) {
+            return false;
+        }
+        String expectedSignature = generateSignature(uploadId, expiration);
+        return expectedSignature.equals(signature);
+    }
+
+    private String generateSignature(String uploadId, long expiration) {
+        try {
+            String data = uploadId + ":" + expiration;
+            Mac hmac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(this.secretKey.getBytes(),
+                    "HmacSHA256");
+            hmac.init(secretKeySpec);
+            byte[] hash = hmac.doFinal(data.getBytes());
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate signature", e);
+        }
+    }
+
+    public Path getFilePath(String uploadId) {
+        return Path.of(uploadDirectory, uploadId);
     }
 }
