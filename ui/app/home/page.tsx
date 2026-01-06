@@ -6,7 +6,7 @@ import { Navbar } from "@/components/landing/navbar";
 import { SearchBar } from "./search-bar";
 import { UploadFab } from "@/components/home/upload-fab";
 import { LayoutGrid, List, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { uploadService, UploadTask } from "@/services/upload-service";
 import { fileService } from "@/services/file-service";
@@ -41,7 +41,7 @@ export default function HomePage() {
     const [serverFiles, setServerFiles] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const refreshFiles = async () => {
+    const refreshFiles = useCallback(async () => {
         try {
             setIsLoading(true);
             const files = await fileService.listFiles(currentFolderId || undefined);
@@ -60,11 +60,11 @@ export default function HomePage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [currentFolderId]);
 
     useEffect(() => {
         refreshFiles();
-    }, [currentFolderId]);
+    }, [refreshFiles]);
 
     useEffect(() => {
         // Initial load
@@ -82,7 +82,7 @@ export default function HomePage() {
             unsubscribe();
             unsubscribeCompletion();
         };
-    }, []);
+    }, [refreshFiles]);
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
