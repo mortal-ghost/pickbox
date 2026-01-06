@@ -2,27 +2,27 @@ package com.example.pickbox.services.impl;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
 import com.example.pickbox.services.StorageService;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Service
 @Slf4j
@@ -32,6 +32,8 @@ public class LocalStorageService implements StorageService {
     private final String baseUploadUrl;
 
     private final String secretKey;
+
+    private final String baseUrl;
 
     private static final String TEMP_CHUNK_DIR = ".tmp";
 
@@ -49,10 +51,12 @@ public class LocalStorageService implements StorageService {
 
     public LocalStorageService(@Value("${local.storage.path}") String uploadDirectory,
             @Value("${local.upload.url}") String baseUploadUrl,
-            @Value("${local.storage.secret-key}") String secretKey) {
+            @Value("${local.storage.secret-key}") String secretKey,
+            @Value("${local.base.url}") String baseUrl) {
         this.uploadDirectory = uploadDirectory;
         this.baseUploadUrl = baseUploadUrl;
         this.secretKey = secretKey;
+        this.baseUrl = baseUrl;
     }
 
     @PostConstruct
@@ -196,7 +200,7 @@ public class LocalStorageService implements StorageService {
         String encodedFilename = URLEncoder.encode(originalFileName, StandardCharsets.UTF_8);
 
         return String.format("%s/local-download/%s?expires=%d&signature=%s&filename=%s",
-                baseUploadUrl, uploadId, expiration, signature, encodedFilename);
+                baseUrl, uploadId, expiration, signature, encodedFilename);
     }
 
     public boolean verifySignature(String uploadId, long expiration, String signature) {

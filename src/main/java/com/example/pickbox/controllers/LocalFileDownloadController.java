@@ -33,7 +33,7 @@ public class LocalFileDownloadController {
             @RequestParam long expires,
             @RequestParam String signature,
             @RequestParam(required = false) String filename) {
-
+        log.info("Download request for uploadId: {}", uploadId);
         if (!localStorageService.verifySignature(uploadId, expires, signature)) {
             log.warn("Invalid signature or expired link for uploadId: {}", uploadId);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -44,6 +44,7 @@ public class LocalFileDownloadController {
             if (!Files.exists(filePath)) {
                 return ResponseEntity.notFound().build();
             }
+            log.info("File exists at path: {}", filePath);
 
             Resource resource = new InputStreamResource(Files.newInputStream(filePath));
 
