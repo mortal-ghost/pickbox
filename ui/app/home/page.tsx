@@ -6,7 +6,7 @@ import { Navbar } from "@/components/landing/navbar";
 import { SearchBar } from "./search-bar";
 import { UploadFab } from "@/components/home/upload-fab";
 import { LayoutGrid, List, Loader2 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { uploadService, UploadTask } from "@/services/upload-service";
 import { fileService } from "@/services/file-service";
@@ -37,6 +37,7 @@ export default function HomePage() {
     // Folder Creation State
     const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("New Folder");
+    const folderPathRef = useRef<string[][]>([]);
 
     const [serverFiles, setServerFiles] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -138,18 +139,17 @@ export default function HomePage() {
 
     const handleFolderClick = (item: FileItem) => {
         if (item.type === 'FOLDER' && !item.isUploading) {
+            folderPathRef.current.push([item.id, item.name]);
             setCurrentFolderId(item.id);
             setCurrentFolderName(item.name);
         }
     };
 
     const handleGoBack = () => {
-        // Simple go back for now, ideally we need breadcrumbs or parentId tracking from backend
-        // Since we don't have parentId history in state yet easily without fetching,
-        // we'll just go to root for now or need a better strategy. 
-        // For this step, let's just allow going to root if not root.
-        setCurrentFolderId(null);
-        setCurrentFolderName(null);
+        folderPathRef.current.pop();
+        const last = folderPathRef.current.at(-1);
+        setCurrentFolderId(last?.[0] ?? null);
+        setCurrentFolderName(last?.[1] ?? null);
     };
 
     // Combine Server + Uploads
@@ -159,7 +159,7 @@ export default function HomePage() {
             .map(t => ({
                 id: t.uploadId,
                 name: t.file.name,
-                type: 'FILE' as const, // Explicit const assertion
+                type: 'FILE' as const,
                 size: t.file.size,
                 updatedAt: Date.now(),
                 isUploading: t.status !== 'COMPLETED',
@@ -293,7 +293,7 @@ export default function HomePage() {
             />
 
             <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-106.25">
                     <DialogHeader>
                         <DialogTitle>Create New Folder</DialogTitle>
                         <DialogDescription>
